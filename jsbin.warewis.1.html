@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<!--
+Created using JS Bin
+http://jsbin.com
+
+Copyright (c) 2017 by businesstron (http://jsbin.com/warewis/1/edit)
+
+Released under the MIT license: http://jsbin.mit-license.org
+-->
+<meta name="robots" content="noindex">
+<html>
+Lab 6 Event Handling 
+<head>
+<meta name="description" content="[add your bin description]">
+  <meta charset="utf-8" />
+  <title>Survey Results</title>
+  <link href="../../content/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../../content/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
+  <script src="surveyResults.js"></script>
+  <script src="surveyFunctions.js"></script>
+</head>
+
+<body class="container">
+  <header>
+    <h1>JavaScript Labs</h1>
+  </header>
+  <main>
+    <h2 id='graphType'>Survey Results</h2>
+    <button id="summaryButton" class="btn">Summary</button>
+    <button id="overallScoreButton" class="btn">Overall Score</button>
+    <button id="trendsButton" class="btn">Trends</button>
+    <section>
+      <canvas id="resultsCanvas" width="850" height="600" class="img-responsive" />
+    </section>
+  </main>
+<script id="jsbin-javascript">
+var ctx;
+var leftSideOfGraph = 110;
+var widthOfGraph = 750;
+var topOfGraph = 50;
+var heightOfGraph = 500;
+var rightSideOfGraph = leftSideOfGraph + widthOfGraph;
+var bottomOfGraph = topOfGraph + heightOfGraph;
+
+var backgroundColor = "white";
+var axesColor = "black";
+var labelsColor = "purple";
+var backgroundLinesColor = "cyan";
+var color = {
+  excellent: "green",
+  good: "blue",
+  okay: "purple",
+  poor: "orange",
+  terrible: "red"
+};
+
+var xTic = (rightSideOfGraph - leftSideOfGraph) / (29); //pixels per day
+var yTic = (bottomOfGraph - topOfGraph) / (100); //pixels per score
+
+document.addEventListener("DOMContentLoaded", function () {
+  // Add your JavaScript here
+  //var canvas = document.getElementById("resultsCanvas");
+  //ctx = canvas.getContext("2d");
+  // Draw the trends graph on page load.
+      cv = document.getElementById("resultsCanvas");
+    console.log("inside domcontentloaded", cv);
+    ctx = cv.getContext("2d");
+  drawTrends();
+
+  document.getElementById("summaryButton").addEventListener("click", () => {
+    drawSummary();
+  });
+  document.getElementById("trendsButton").addEventListener("click", () => {
+    drawTrends();
+  });
+  document.getElementById("overallScoreButton").addEventListener("click", () => {
+    drawOverallScore();
+  });
+  
+       cv.addEventListener("contextmenu", function(evt){
+        evt.preventDefault();
+        console.log(evt);
+    });
+});
+
+
+function drawSummary() {
+  document.getElementById("graphType").innerText = "Summary";
+  clearCanvas();
+}
+
+function drawTrends() {
+  document.getElementById("graphType").innerText = "Trends";
+  clearCanvas();
+  drawLine(0, 29, "excellent");
+  drawLine(0, 29, "good");
+  drawLine(0, 29, "okay");
+  drawLine(0, 29, "poor");
+  drawLine(0, 29, "terrible");
+}
+
+function drawOverallScore() {
+  document.getElementById("graphType").innerText = "Overall Score";
+  clearCanvas();
+  for (let i = 1; i < 30; i++) {
+    drawLine(i, i - 1, "excellent");
+    drawLine(i, i - 1, "good");
+    drawLine(i, i - 1, "okay");
+    drawLine(i, i - 1, "poor");
+    drawLine(i, i - 1, "terrible");
+  }
+  //Draw the circles around the datapoints
+  for (let level in color) {
+    for (let i = 0; i < 30; i++) {
+      ctx.beginPath();
+      ctx.strokeStyle = color[level];
+      ctx.moveTo(getXPointForDay(i), getYPointForScore(raw_survey_results[i][level]))
+      ctx.arc(getXPointForDay(i), getYPointForScore(raw_survey_results[i][level]), 2, 0, 2 * Math.PI / 180, true);
+      ctx.stroke();
+      ctx.closePath();
+    }
+  }
+}
+
+function clearCanvas() {
+  // Draw a big white rectangle
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(leftSideOfGraph, topOfGraph, widthOfGraph, heightOfGraph);
+
+  // Draw the legend
+  ctx.font = "25px Arial";
+  ctx.fillStyle = labelsColor;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Scores", leftSideOfGraph - 110, bottomOfGraph - heightOfGraph / 2);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText("Days", leftSideOfGraph + widthOfGraph / 2, bottomOfGraph + 15);
+
+  // Draw the Axes
+  ctx.beginPath();
+  ctx.strokeStyle = axesColor;
+  ctx.lineWidth = 3;
+  ctx.moveTo(leftSideOfGraph, topOfGraph);
+  ctx.lineTo(leftSideOfGraph, bottomOfGraph);
+  ctx.lineTo(rightSideOfGraph, bottomOfGraph);
+  ctx.stroke();
+  ctx.closePath();
+
+  // Number the horizontal axis
+  ctx.font = "12px Arial";
+  for (let i = 1; i < 30; i++)
+  ctx.fillText(i, getXPointForDay(i), bottomOfGraph + 5);
+
+  // Number the vertical axis
+  for (let i = 5; i <= 100; i += 5)
+  ctx.fillText(i, leftSideOfGraph - 15, getYPointForScore(i));
+
+  // Draw the vertical lines
+  for (let i = 1; i < 30; i++) {
+    ctx.beginPath();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = backgroundLinesColor;
+    ctx.moveTo(getXPointForDay(i), bottomOfGraph);
+    ctx.lineTo(getXPointForDay(i), topOfGraph);
+    ctx.stroke();
+    ctx.closePath();
+  }
+
+  // Draw the horizontal lines
+  for (let i = 5; i <= 100; i += 5) {
+    ctx.beginPath();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = backgroundLinesColor;
+    ctx.moveTo(leftSideOfGraph, getYPointForScore(i));
+    ctx.lineTo(rightSideOfGraph, getYPointForScore(i));
+    ctx.stroke();
+    ctx.closePath();
+  }
+
+  // Put in a logo - why not?
+  var img = new Image();
+  img.addEventListener("load", () => {
+    ctx.drawImage(img, rightSideOfGraph - 110, topOfGraph, 100, 100);
+  });
+  img.src = "../../content/images/javaScript.png";
+}
+
+function drawLine(startDay, endDay, level) {
+  ctx.beginPath();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = color[level];
+  ctx.moveTo(getXPointForDay(startDay),
+  getYPointForScore(raw_survey_results[startDay][level]));
+  ctx.lineTo(getXPointForDay(endDay),
+  getYPointForScore(raw_survey_results[endDay][level]));
+  ctx.stroke();
+  ctx.closePath();
+
+}
+
+function getXPointForDay(day = 0) {
+  return leftSideOfGraph + (day * xTic);
+}
+
+function getYPointForScore(score = 0) {
+  return bottomOfGraph - (score * yTic);
+}
+
+var raw_survey_results = [
+  {
+    "Day": 1,
+    "excellent": 20,
+    "good": 25,
+    "okay": 35,
+    "poor": 15,
+    "terrible": 5
+  },
+  {
+    "Day": 2,
+    "excellent": 22,
+    "good": 22,
+    "okay": 36,
+    "poor": 16,
+    "terrible": 4
+  },
+  {
+    "Day": 3,
+    "excellent": 24,
+    "good": 26,
+    "okay": 35,
+    "poor": 15,
+    "terrible": 5
+  },
+  {
+    "Day": 4,
+    "excellent": 21,
+    "good": 27,
+    "okay": 34,
+    "poor": 14,
+    "terrible": 4
+  },
+  {
+    "Day": 5,
+    "excellent": 23,
+    "good": 27,
+    "okay": 32,
+    "poor": 15,
+    "terrible": 3
+  },
+  {
+    "Day": 6,
+    "excellent": 24,
+    "good": 30,
+    "okay": 29,
+    "poor": 13,
+    "terrible": 4
+  },
+  {
+    "Day": 7,
+    "excellent": 25,
+    "good": 30,
+    "okay": 28,
+    "poor": 13,
+    "terrible": 4
+  },
+  {
+    "Day": 8,
+    "excellent": 23,
+    "good": 34,
+    "okay": 26,
+    "poor": 12,
+    "terrible": 3
+  },
+  {
+    "Day": 9,
+    "excellent": 22,
+    "good": 36,
+    "okay": 27,
+    "poor": 12,
+    "terrible": 1
+  },
+  {
+    "Day": 10,
+    "excellent": 23,
+    "good": 33,
+    "okay": 28,
+    "poor": 14,
+    "terrible": 2
+  },
+  {
+    "Day": 11,
+    "excellent": 22,
+    "good": 36,
+    "okay": 26,
+    "poor": 13,
+    "terrible": 3
+  },
+  {
+    "Day": 12,
+    "excellent": 24,
+    "good": 38,
+    "okay": 25,
+    "poor": 11,
+    "terrible": 2
+        },
+  {
+    "Day": 13,
+    "excellent": 25,
+    "good": 39,
+    "okay": 23,
+    "poor": 10,
+    "terrible": 3
+        },
+  {
+    "Day": 14,
+    "excellent": 27,
+    "good": 38,
+    "okay": 23,
+    "poor": 11,
+    "terrible": 2
+        },
+  {
+    "Day": 15,
+    "excellent": 24,
+    "good": 32,
+    "okay": 22,
+    "poor": 10,
+    "terrible": 2
+        },
+  {
+    "Day": 16,
+    "excellent": 27,
+    "good": 32,
+    "okay": 20,
+    "poor": 10,
+    "terrible": 1
+        },
+  {
+    "Day": 17,
+    "excellent": 30,
+    "good": 39,
+    "okay": 21,
+    "poor": 9,
+    "terrible": 1
+        },
+  {
+    "Day": 18,
+    "excellent": 29,
+    "good": 43,
+    "okay": 19,
+    "poor": 8,
+    "terrible": 1
+        },
+  {
+    "Day": 19,
+    "excellent": 32,
+    "good": 42,
+    "okay": 18,
+    "poor": 8,
+    "terrible": 0
+  },
+  {
+    "Day": 20,
+    "excellent": 33,
+    "good": 41,
+    "okay": 19,
+    "poor": 7,
+    "terrible": 0
+  },
+  {
+    "Day": 21,
+    "excellent": 35,
+    "good": 39,
+    "okay": 17,
+    "poor": 8,
+    "terrible": 1
+  },
+  {
+    "Day": 22,
+    "excellent": 37,
+    "good": 41,
+    "okay": 16,
+    "poor": 6,
+    "terrible": 0
+  },
+  {
+    "Day": 23,
+    "excellent": 39,
+    "good": 39,
+    "okay": 16,
+    "poor": 6,
+    "terrible": 0
+  },
+  {
+    "Day": 24,
+    "excellent": 38,
+    "good": 42,
+    "okay": 15,
+    "poor": 5,
+    "terrible": 0
+  },
+  {
+    "Day": 25,
+    "excellent": 41,
+    "good": 41,
+    "okay": 13,
+    "poor": 5,
+    "terrible": 0
+  },
+  {
+    "Day": 26,
+    "excellent": 43,
+    "good": 41,
+    "okay": 12,
+    "poor": 4,
+    "terrible": 0
+  },
+  {
+    "Day": 27,
+    "excellent": 45,
+    "good": 41,
+    "okay": 10,
+    "poor": 4,
+    "terrible": 0
+  },
+  {
+    "Day": 28,
+    "excellent": 45,
+    "good": 43,
+    "okay": 10,
+    "poor": 3,
+    "terrible": 0
+  },
+  {
+    "Day": 29,
+    "excellent": 44,
+    "good": 43,
+    "okay": 10,
+    "poor": 3,
+    "terrible": 0
+  },
+  {
+    "Day": 30,
+    "excellent": 45,
+    "good": 44,
+    "okay": 9,
+    "poor": 2,
+    "terrible": 0
+  }
+];
+</script>
+</body>
+
+</html>
